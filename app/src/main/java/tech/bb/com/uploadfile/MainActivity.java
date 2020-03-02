@@ -26,6 +26,9 @@ import com.squareup.okhttp.Response;
 import com.squareup.okhttp.TlsVersion;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.cert.CertificateException;
 import java.util.Collections;
@@ -35,6 +38,8 @@ import javax.net.ssl.X509TrustManager;
 
 public class MainActivity extends AppCompatActivity {
 
+    File testADir = new File(Environment.getExternalStorageDirectory(),"testA");
+    File testBDir = new File(Environment.getExternalStorageDirectory(),"testB");
     private static final String TAG = "MainActivity";
 
     private static final String URL ="https://helix-flexdev-device-file-drop.s3.dualstack.us-west-2.amazonaws.com/WGFLXD-EDMDDLZE/diagpkg_20200228_084725_354115100004231_user.tar.gz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIATVJ5DCCLZVZP7PMV%2F20200228%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20200228T084803Z&X-Amz-Expires=604800&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEAkaCXVzLXdlc3QtMiJGMEQCIA2Mi5N16hxNKWPQyNS3xMpAAGCSJHwqo1KpTMkPRryPAiAVvVDegFaSWElAoTuw%2FJOrYFGrR7YrD5RhruFEcTQTOSrpAQjS%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAEaDDI1MTkyMDU4NDg1NSIMc000e5cBh2dk2T5uKr0Bz9eUu6sm8me0cJ7P46gZ4MvfybL%2Fj%2Bth9ROWfEuFMi10j5q4wTq9VZuVlKNdXWdZndyNUjCRXL%2BltJUSHsa8YRvtwa%2BTVgvKCk3NNEhBCE%2FMD6RWwYf1nrF6X4UbGgDr1tFVnUmkedo3t%2BCBXS4bT%2Fx0cgXgiD2wlPSduzPZcFmUuC%2BzkH3YLsPdkWa%2FTlKo%2Fq702kXRslw6%2BD%2BeQLTaGeloLmrcYp0hzDTpmPnZl5Ft09tVEforNfXDZufWMMGn4%2FIFOuEBVUPTBsjHmA1fKx5PgEBvm2G4vi6DxHFckP0nUFCv5dy1nH5QtJdgH9f%2B%2FdJLo5TFbGiMliUtLGbbK0EdUReUXuSo4EK%2BoYKDO5%2Fn2PAW0vOHtJc16Xf%2FfUlMZ3WpGmqggUnIqR%2FCtS90NQoiek9QzjcMS5DUpu5JWVc5xe1QvWntzeAhVj3cTp9NlTPu191tIt7jSFolTR3DCRxfUBvtWcL9DdkwbgdikjmZc47XS6nWp1MlenBkvHRXUrf0LlO9xlVcMbjxEypQjI5FzsntGOUDrbaTGzz8HdTyx44Z7agu&X-Amz-Signature=51e3cda87894720d41852a852ad9f32ca1e372c07f298a59e61501693ec0e036&X-Amz-SignedHeaders=host%3Bx-amz-acl&x-amz-acl=private";
@@ -55,10 +60,23 @@ public class MainActivity extends AppCompatActivity {
                 if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
                    requestPermissions(new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"},1);
                 }else{
-                    uploadLogToServer(URL);
+                      uploadLogToServer(URL);
                 }
 
                // uploadLogToServer("https://www.baidu.com");
+            }
+        });
+
+        Button copyDirFilesButton = findViewById(R.id.copy_dir_files);
+        copyDirFilesButton.setOnClickListener(new View.OnClickListener(){
+
+            @Override
+            public void onClick(View v) {
+                if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                    requestPermissions(new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"},2);
+                }else{
+                    copyDirTest(testADir,testBDir);
+                }
             }
         });
     }
@@ -134,6 +152,10 @@ public class MainActivity extends AppCompatActivity {
             if(permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE) && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                 uploadLogToServer(URL);
             }
+        }else if(requestCode == 2){
+            if(permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE) && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                copyDirTest(testADir,testBDir);
+            }
         }
     }
 
@@ -152,5 +174,86 @@ public class MainActivity extends AppCompatActivity {
             return new java.security.cert.X509Certificate[]{};
         }
     };
+   //copy dir testA to testB
 
+    private void copyDirTest(File soruceDirFile,File targetDirFile){
+        //sdcard
+/*        if(dirFile.isFile()){
+            File targetFile = new File(testBDir,dirFile.getName());
+            copyfile(dirFile,targetFile);
+            return;
+        }*/
+/*        if(!soruceDirFile.isDirectory() || !targetDirFile.isDirectory()){
+            Log.d(TAG,"  the params is not dir ,return");
+            return;
+        }*/
+        Log.d(TAG,"  soruceDirFile: " + soruceDirFile.getAbsolutePath());
+        Log.d(TAG,"  targetDirFile: " + targetDirFile.getAbsolutePath());
+        boolean result = false;
+        String dirName = soruceDirFile.getName();
+        File targetDir = new File(targetDirFile,dirName);
+        if(!targetDir.exists()){
+             result = targetDir.mkdirs();
+            Log.d(TAG,"  create dir: " + targetDir.getAbsolutePath());
+            if(result == false){
+                Log.d(TAG,"  create dir fail,dir: " + targetDir.getAbsolutePath());
+                return;
+            }
+        }else {
+            Log.d(TAG, "the dir: " + targetDir.getAbsolutePath() + " is exist ,do not need create it");
+        }
+       // boolean result = targetDir.mkdir();
+
+
+        File files[] = soruceDirFile.listFiles();
+        for(File file : files){
+           if(file.isFile()){//copy file
+                File targetFile = new File(targetDir,file.getName());
+                if(targetFile.exists()){
+                    targetFile.delete();
+                }
+                try {
+                    result = targetFile.createNewFile();
+                    if(result == false){
+                        Log.d(TAG," create new file fail. retrun " + targetFile.getAbsolutePath());
+                        return;
+                    }
+                    Log.d(TAG,"  copy file sorce file: " + file.getAbsolutePath());
+                    Log.d(TAG,"  copy file target file: " + targetFile.getAbsolutePath());
+                    copyfile(file,targetFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else if(file.isDirectory()){//copy dir
+               copyDirTest(file,targetDir);
+           }
+        }
+    }
+
+    private void copyfile(File sourceFile,File targetFile){
+        try {
+             if(!sourceFile.isFile() || !targetFile.isFile()){
+                 Log.d(TAG," the source or targe is not file,return ");
+                 return;
+             }
+
+            FileInputStream fileInputStream = new FileInputStream(sourceFile);
+            FileOutputStream fileOutputStream = new FileOutputStream(targetFile);
+            byte[] buffer = new byte[1024];
+            int len = 0;
+            while ((len = fileInputStream.read(buffer)) != -1){
+                fileOutputStream.write(buffer,0,len);
+            }
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void copyFileDir(){
+
+    }
 }
