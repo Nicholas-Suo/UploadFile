@@ -30,9 +30,12 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.cert.CertificateException;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.net.ssl.X509TrustManager;
 
@@ -77,6 +80,19 @@ public class MainActivity extends AppCompatActivity {
                 }else{
                     copyDirTest(testADir,testBDir);
                 }
+            }
+        });
+
+        Button zipFileButton = findViewById(R.id.zip_files);
+        zipFileButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                    requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},3);
+                }else{
+                    zipFileTest();
+                }
+
             }
         });
     }
@@ -156,7 +172,13 @@ public class MainActivity extends AppCompatActivity {
             if(permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE) && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                 copyDirTest(testADir,testBDir);
             }
+        }else if(requestCode == 3){
+            if(permissions[0].equals(Manifest.permission.WRITE_EXTERNAL_STORAGE) && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                zipFileTest();
+            }
         }
+
+
     }
 
 
@@ -175,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
    //copy dir testA to testB
-
+   /*copy dir: ex.file dir A to file dir B, the result is:B/A*/
     private void copyDirTest(File soruceDirFile,File targetDirFile){
         //sdcard
 /*        if(dirFile.isFile()){
@@ -230,6 +252,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /*    copy file A to B,the file B's name is same with A,and it's a new empty file*/
     private void copyfile(File sourceFile,File targetFile){
         try {
              if(!sourceFile.isFile() || !targetFile.isFile()){
@@ -251,9 +274,93 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+    //zip the files to current dir
+    private void zipFileDir(ZipOutputStream zipOutputStream ,File sourceFile){
 
 
-    private void copyFileDir(){
+        if(sourceFile == null || !sourceFile.exists() || zipOutputStream == null){
+            Log.d(TAG," zipFileDir params is null ");
+            return;
+        }
+        Log.d(TAG," zip sourceFile path: " + sourceFile.getAbsolutePath() + "  parent path: " + sourceFile.getParent());
+        try {
 
+
+            Log.d(TAG," zipFileDir begin zip");
+            if(sourceFile.isFile()){
+                Log.d(TAG," this is file: " + sourceFile.getName());
+                zipFile(zipOutputStream,sourceFile);
+                /*ZipEntry zipEntry = new ZipEntry(sourceFile.getName());
+                zipOutputStream.putNextEntry(zipEntry);
+                FileInputStream sourceFileInputStream = new FileInputStream(sourceFile);
+                int len = -1;
+                byte[] buffer = new byte[1024];
+                while((len = sourceFileInputStream.read(buffer)) != -1){
+                    Log.d(TAG," read ,len: " + len);
+                    zipOutputStream.write(buffer,0,len);
+                }
+                Log.d(TAG," read ,len end: " + len);
+                sourceFileInputStream.close();
+                zipOutputStream.close();
+                Log.d(TAG," close zipFileDir");*/
+            }else if(sourceFile.isDirectory()){
+                Log.d(TAG," current dir name:" + sourceFile.getName());
+                ZipEntry zipEntry = new ZipEntry(sourceFile.getName() + File.separator);
+                zipOutputStream.putNextEntry(zipEntry);
+                File[] files = sourceFile.listFiles();
+                  for(File file:files){
+                      if(file.isFile()){
+                          zipFile(zipOutputStream,file);
+                      }else if(file.isDirectory()){
+                          zipFileDir(zipOutputStream,file);
+                      }
+                  }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void zipFile(ZipOutputStream zipOutputStream ,File sourceFile){
+        if(zipOutputStream == null || sourceFile == null || !sourceFile.isFile() || !sourceFile.exists()){
+            Log.d(TAG," zip file params error.");
+            return;
+        }
+        Log.d(TAG," zip file begin " + sourceFile.getName() );
+        ZipEntry zipEntry = new ZipEntry(sourceFile.getName());
+        try {
+            zipOutputStream.putNextEntry(zipEntry);
+            FileInputStream fileIs = new FileInputStream(sourceFile);
+            byte[] buffer = new byte[1024];
+            int len = -1;
+            while((len = fileIs.read(buffer)) != -1){
+                 zipOutputStream.write(buffer,0,len);
+            }
+            fileIs.close();
+           // zipOutputStream.close();
+            Log.d(TAG," zip file finish");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+    private void zipFileTest(){
+        File sourceFile = new File(Environment.getExternalStorageDirectory(),"A");
+        ZipOutputStream zipOutputStream =null;
+        File zipFile = null;
+        zipFile = new File(Environment.getExternalStorageDirectory(),"test.zip");
+        FileOutputStream zipFos = null;
+        try {
+            zipFos = new FileOutputStream(zipFile);
+            zipOutputStream = new ZipOutputStream(zipFos);
+            zipFileDir(zipOutputStream,sourceFile);
+            zipOutputStream.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
