@@ -274,45 +274,43 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-    //zip the files to current dir
-    private void zipFileDir(ZipOutputStream zipOutputStream ,File sourceFile){
+    //zip the files to current dir,
+  /*
+    zipOutputStream is the target zip file stream,
+    sourceFile: is the source dir file;
+    targetDir: is target dir
+    ex.source file is dir "/sdcard/A", we want to zip the dir "A";
+       the fileDirName is  "A/",need contains of "/
+       the zip outputstream si the targetDir's stream
+    */
+    private void zipDir(ZipOutputStream zipOutputStream ,File sourceFile,String fileDirName){
 
 
-        if(sourceFile == null || !sourceFile.exists() || zipOutputStream == null){
+        if(sourceFile == null || !sourceFile.exists() || zipOutputStream == null || fileDirName == null){// || baseDir.lastIndexOf(File.separator) == -1
             Log.d(TAG," zipFileDir params is null ");
             return;
         }
-        Log.d(TAG," zip sourceFile path: " + sourceFile.getAbsolutePath() + "  parent path: " + sourceFile.getParent());
+        Log.d(TAG," zip sourceFile path: " + sourceFile.getAbsolutePath() );//+ "  parent path: " + sourceFile.getParent()
         try {
 
 
             Log.d(TAG," zipFileDir begin zip");
             if(sourceFile.isFile()){
-                Log.d(TAG," this is file: " + sourceFile.getName());
-                zipFile(zipOutputStream,sourceFile);
-                /*ZipEntry zipEntry = new ZipEntry(sourceFile.getName());
-                zipOutputStream.putNextEntry(zipEntry);
-                FileInputStream sourceFileInputStream = new FileInputStream(sourceFile);
-                int len = -1;
-                byte[] buffer = new byte[1024];
-                while((len = sourceFileInputStream.read(buffer)) != -1){
-                    Log.d(TAG," read ,len: " + len);
-                    zipOutputStream.write(buffer,0,len);
-                }
-                Log.d(TAG," read ,len end: " + len);
-                sourceFileInputStream.close();
-                zipOutputStream.close();
-                Log.d(TAG," close zipFileDir");*/
+                Log.d(TAG," this is a file: " + sourceFile.getName());
+                zipFile(zipOutputStream,sourceFile,fileDirName);
             }else if(sourceFile.isDirectory()){
-                Log.d(TAG," current dir name:" + sourceFile.getName());
-                ZipEntry zipEntry = new ZipEntry(sourceFile.getName() + File.separator);
+                Log.d(TAG," current dir name:" + sourceFile.getName() + " fileDirName: " + fileDirName);
+                String entryDir = fileDirName + File.separator;//+ sourceFile.getName() +
+                ZipEntry zipEntry = new ZipEntry(entryDir);
                 zipOutputStream.putNextEntry(zipEntry);
                 File[] files = sourceFile.listFiles();
-                  for(File file:files){
-                      if(file.isFile()){
-                          zipFile(zipOutputStream,file);
-                      }else if(file.isDirectory()){
-                          zipFileDir(zipOutputStream,file);
+                  for(File subFile:files){
+                      Log.d(TAG," sub file :" + subFile.getAbsolutePath());
+                      if(subFile.isFile()){
+                          zipFile(zipOutputStream,subFile,entryDir);
+                      }else if(subFile.isDirectory()){
+                          String fileDir = entryDir + subFile.getName();
+                          zipDir(zipOutputStream,subFile,fileDir);
                       }
                   }
             }
@@ -323,13 +321,26 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+/*    zip file*/
     private void zipFile(ZipOutputStream zipOutputStream ,File sourceFile){
-        if(zipOutputStream == null || sourceFile == null || !sourceFile.isFile() || !sourceFile.exists()){
+        zipFile(zipOutputStream ,sourceFile ,null);
+    }
+
+    /*    zip sub file*/
+    private void zipFile(ZipOutputStream zipOutputStream ,File sourceFile ,String baseDir){
+        String entryDir;
+
+        if(zipOutputStream == null || sourceFile == null || !sourceFile.isFile() || !sourceFile.exists() || (baseDir!=null && baseDir.lastIndexOf(File.separator) < 1)){// || baseDir.lastIndexOf(File.separator) == -1 must be A/
             Log.d(TAG," zip file params error.");
             return;
         }
-        Log.d(TAG," zip file begin " + sourceFile.getName() );
-        ZipEntry zipEntry = new ZipEntry(sourceFile.getName());
+        if(baseDir == null){
+             entryDir = sourceFile.getName();
+        }else{
+            entryDir = baseDir + sourceFile.getName();
+        }
+        Log.d(TAG," zip file begin " + sourceFile.getName() + " absolute path: " +sourceFile.getAbsolutePath() + " entryDir is: " + entryDir);
+        ZipEntry zipEntry = new ZipEntry(entryDir);
         try {
             zipOutputStream.putNextEntry(zipEntry);
             FileInputStream fileIs = new FileInputStream(sourceFile);
@@ -350,12 +361,20 @@ public class MainActivity extends AppCompatActivity {
         File sourceFile = new File(Environment.getExternalStorageDirectory(),"A");
         ZipOutputStream zipOutputStream =null;
         File zipFile = null;
-        zipFile = new File(Environment.getExternalStorageDirectory(),"test.zip");
+
+        zipFile = new File(Environment.getExternalStorageDirectory(),"Logs.zip");
         FileOutputStream zipFos = null;
         try {
             zipFos = new FileOutputStream(zipFile);
             zipOutputStream = new ZipOutputStream(zipFos);
-            zipFileDir(zipOutputStream,sourceFile);
+            Log.d(TAG," file's sourceFile path: " + sourceFile.getPath());
+           // String baseDir = sourceFile.getName() + File.separator;
+            if(sourceFile.isFile()){
+                zipFile(zipOutputStream,sourceFile);
+            }else{
+                zipDir(zipOutputStream,sourceFile,sourceFile.getName());
+            }
+
             zipOutputStream.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
